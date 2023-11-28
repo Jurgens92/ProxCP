@@ -9,7 +9,6 @@ fi
 # List of packages to install
 packages=(
     nginx
-    software-properties-common
     git
     # Add more packages here if needed
 )
@@ -30,10 +29,6 @@ do
     sudo apt install -y "$package"
 done
 
-echo "Adding MariaDB repository..."
-sudo apt-get install -y software-properties-common
-sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
-sudo add-apt-repository 'deb [arch=amd64,arm64,ppc64el] http://sfo1.mirrors.digitalocean.com/mariadb/repo/10.6/ubuntu focal main'
 
 echo "Installing MariaDB..."
 sudo apt-get update
@@ -48,19 +43,38 @@ FLUSH PRIVILEGES;
 EXIT;
 EOF
 
+
+echo "Installing PHP 7.2 and necessary extensions..."
+sudo apt-get install -y php7.2 
+sudo apt-get install -y php7.2-fpm 
+sudo apt-get install -y php7.2-mysql 
+sudo apt-get install -y php7.2-gd 
+sudo apt-get install -y php7.2-curl 
+sudo apt-get install -y php7.2-mbstring 
+sudo apt-get install -y php7.2-xml 
+sudo apt-get install -y php7.2-json 
+#sudo apt-get install -y php7.2-zip 
+#sudo apt-get install -y php7.2-openssl 
+#sudo apt-get install -y php7.2-xmlrpc
+sudo apt-get install -y php7.2-iconv 
+#sudo apt-get install -y php7.2-intl sendmail
+sudo apt-get install -y certbot python3-certbot-nginx
+
+#echo "Restarting PHP-FPM..."
+#sudo systemctl restart php7.2-fpm
+
+
 echo "Downloading ionCube loaders..."
 # Replace '/tmp/ioncube' with the directory where you placed the ionCube loaders.
 cd /tmp
 wget https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz
+tar -zxvf ioncube_loaders_lin_x86*
 sudo mkdir -p /usr/local/ioncube
 sudo cp /tmp/ioncube/ioncube_loader_lin_7.2.so /usr/local/ioncube
 
 echo "Configuring ionCube loaders..."
 # Add ionCube configuration to PHP configuration file (e.g., /etc/php/7.2/cli/php.ini)
 echo "zend_extension=/usr/local/ioncube/ioncube_loader_lin_7.2.so" | sudo tee -a /etc/php/7.2/cli/php.ini
-
-echo "Restarting PHP-FPM..."
-sudo systemctl restart php7.2-fpm
 
 echo "Cloning ProxCP repository..."
 git clone https://github.com/Jurgens92/ProxCP.git /tmp/proxcp_temp
@@ -72,14 +86,16 @@ echo "Moving ProxCP content to /var/www/proxcp..."
 sudo mv /tmp/proxcp_temp/web/* /var/www/proxcp/
 sudo rm -r /tmp/proxcp_temp
 
-echo "Installing PHP 7.2 and necessary extensions..."
-sudo apt-get install -y php7.2 php7.2-fpm php7.2-mysql php7.2-gd php7.2-curl php7.2-mbstring php7.2-xml php7.2-json php7.2-zip php7.2-openssl php7.2-xmlrpc php7.2-iconv php7.2-intl sendmail
+
 
 echo "Setting up Nginx for ProxCP..."
 sudo tee /etc/nginx/sites-available/proxcp <<EOF
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
+    listen 80;
+    listen [::]:80;
+	
+	# Rename to your fqdn
+	server_name cloud.itwindow.co.za
 
     # Try these filenames when no file specified in URL
     index index.php index.html index.htm;
@@ -114,8 +130,16 @@ server {
 EOF
 
 echo "Setting default site to ProxCP..."
-sudo rm /etc/nginx/sites-enabled/default
+#sudo rm /etc/nginx/sites-enabled/default
 sudo ln -s /etc/nginx/sites-available/proxcp /etc/nginx/sites-enabled/
+
+
+# somehow, something is installing apache... wtf
+echo "removing apache"
+sudo service apache2 stop
+sudo apt-get purge apache2 apache2-utils apache2.2-bin apache2-common
+sudo apt-get autoremove
+sudo rm -rf /etc/apache2  
 
 echo "Restarting Nginx..."
 sudo systemctl restart nginx
