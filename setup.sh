@@ -50,6 +50,8 @@ EOF
 
 echo "Downloading ionCube loaders..."
 # Replace '/tmp/ioncube' with the directory where you placed the ionCube loaders.
+cd /tmp
+wget https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz
 sudo mkdir -p /usr/local/ioncube
 sudo cp /tmp/ioncube/ioncube_loader_lin_7.2.so /usr/local/ioncube
 
