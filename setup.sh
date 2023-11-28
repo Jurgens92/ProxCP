@@ -8,9 +8,6 @@ fi
 
 # List of packages to install
 packages=(
-    package1
-    package2
-    package3
     nginx
     software-properties-common
     git
